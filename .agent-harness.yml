@@ -1,0 +1,5 @@
+# AI Harness configuration
+stacks: [python]
+
+python:
+  coverage_threshold: 80
