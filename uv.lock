@@ -9,28 +9,11 @@ source = { editable = "." }
 dependencies = [
     { name = "click" },
     { name = "mcp", extra = ["cli"] },
+    { name = "mysql-connector-python" },
+    { name = "oracledb" },
     { name = "psycopg2-binary" },
+    { name = "pymssql" },
     { name = "sqlglot" },
-]
-
-[package.optional-dependencies]
-all = [
-    { name = "mariadb" },
-    { name = "mysql-connector-python" },
-    { name = "oracledb" },
-    { name = "pymssql" },
-]
-mariadb = [
-    { name = "mariadb" },
-]
-mssql = [
-    { name = "pymssql" },
-]
-mysql = [
-    { name = "mysql-connector-python" },
-]
-oracle = [
-    { name = "oracledb" },
 ]
 
 [package.dev-dependencies]
@@ -46,19 +29,13 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8,<9" },
-    { name = "mariadb", marker = "extra == 'all'", specifier = ">=1.1,<2" },
-    { name = "mariadb", marker = "extra == 'mariadb'", specifier = ">=1.1,<2" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.9,<2" },
-    { name = "mysql-connector-python", marker = "extra == 'all'", specifier = ">=9,<10" },
-    { name = "mysql-connector-python", marker = "extra == 'mysql'", specifier = ">=9,<10" },
-    { name = "oracledb", marker = "extra == 'all'", specifier = ">=2,<3" },
-    { name = "oracledb", marker = "extra == 'oracle'", specifier = ">=2,<3" },
+    { name = "mysql-connector-python", specifier = ">=9,<10" },
+    { name = "oracledb", specifier = ">=2,<3" },
     { name = "psycopg2-binary", specifier = ">=2.9,<3" },
-    { name = "pymssql", marker = "extra == 'all'", specifier = ">=2.2,<3" },
-    { name = "pymssql", marker = "extra == 'mssql'", specifier = ">=2.2,<3" },
+    { name = "pymssql", specifier = ">=2.2,<3" },
     { name = "sqlglot", specifier = ">=26,<27" },
 ]
-provides-extras = ["mysql", "mariadb", "oracle", "mssql", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -473,23 +450,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/19/74/a633ee74eb36c44aa6d1095e7cc5569bebf04342ee146178e2d36600708b/jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d", size = 32855, upload-time = "2025-09-08T01:34:59.186Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl", hash = "sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe", size = 18437, upload-time = "2025-09-08T01:34:57.871Z" },
-]
-
-[[package]]
-name = "mariadb"
-version = "1.1.14"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "packaging" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/ba/cedef19833be88e07bfff11964441cda8a998f1628dd3b2fa3e7751d36e0/mariadb-1.1.14.tar.gz", hash = "sha256:e6d702a53eccf20922e47f2f45cfb5c7a0c2c6c0a46e4ee2d8a80d0ff4a52f34", size = 111715, upload-time = "2025-10-07T06:45:48.017Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/00/04/659a8d30513700b5921ec96bddc07f550016c045fcbeb199d8cd18476ecc/mariadb-1.1.14-cp312-cp312-win32.whl", hash = "sha256:98d552a8bb599eceaa88f65002ad00bd88aeed160592c273a7e5c1d79ab733dd", size = 185266, upload-time = "2025-10-07T06:45:34.164Z" },
-    { url = "https://files.pythonhosted.org/packages/e4/a9/8f210291bc5fc044e20497454f40d35b3bab326e2cab6fccdc38121cb2c1/mariadb-1.1.14-cp312-cp312-win_amd64.whl", hash = "sha256:685a1ad2a24fd0aae1c4416fe0ac794adc84ab9209c8d0c57078f770d39731db", size = 202112, upload-time = "2025-10-07T06:45:35.824Z" },
-    { url = "https://files.pythonhosted.org/packages/f3/42/51130048bcce038bb859978250515f1aad90e9c4d273630a704e0a8b1ae1/mariadb-1.1.14-cp313-cp313-win32.whl", hash = "sha256:3d2c795cde606f4e12c0d73282b062433f414cae035675b0d81f2d65c9b79ac5", size = 185221, upload-time = "2025-10-07T06:45:37.848Z" },
-    { url = "https://files.pythonhosted.org/packages/af/23/e952a7e442913abd8079cd27b80b69474895c93b3727fad41c7642a80c62/mariadb-1.1.14-cp313-cp313-win_amd64.whl", hash = "sha256:7fd603c5cf23c47ef0d28fdc2b4b79919ee7f75d00ed070d3cd1054dcf816aeb", size = 202121, upload-time = "2025-10-07T06:45:39.453Z" },
-    { url = "https://files.pythonhosted.org/packages/e7/f2/7059f83543a4264b98777d7cc8aa203e1ca6a13a461f730d1c97f29628d4/mariadb-1.1.14-cp314-cp314-win32.whl", hash = "sha256:1a50b4612c0dd5b69690cebb34cef552a7f64dcadeb5aa91d70cd99bf01bc5b3", size = 190620, upload-time = "2025-10-07T06:45:41.349Z" },
-    { url = "https://files.pythonhosted.org/packages/f8/7c/7e094b0b396d742494f6346f2ffa9709e429970b0461aca50526f5f02f12/mariadb-1.1.14-cp314-cp314-win_amd64.whl", hash = "sha256:6659725837e48fa6af05e20128fb525029f706f1921d5dbf639a25b2f80b9f93", size = 206263, upload-time = "2025-10-07T06:45:43.227Z" },
 ]
 
 [[package]]
