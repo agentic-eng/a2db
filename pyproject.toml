@@ -10,6 +10,19 @@ dependencies = [
     "click>=8,<9",
     "mcp[cli]>=1.9,<2",
     "sqlglot>=26,<27",
+    "psycopg2-binary>=2.9,<3",
+]
+
+[project.optional-dependencies]
+mysql = ["mysql-connector-python>=9,<10"]
+mariadb = ["mariadb>=1.1,<2"]
+oracle = ["oracledb>=2,<3"]
+mssql = ["pymssql>=2.2,<3"]
+all = [
+    "mysql-connector-python>=9,<10",
+    "mariadb>=1.1,<2",
+    "oracledb>=2,<3",
+    "pymssql>=2.2,<3",
 ]
 
 [project.scripts]
