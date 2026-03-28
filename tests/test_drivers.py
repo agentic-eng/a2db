@@ -46,6 +46,27 @@ def test_driver_not_found_error_has_install_hint():
     assert driver.install_hint == "pip install psycopg2-binary"
 
 
+def test_parse_dsn_kwargs():
+    from a2db.drivers import _parse_dsn_kwargs
+
+    kwargs = _parse_dsn_kwargs("mysql://admin:secret@db.example.com:3306/mydb")
+    assert kwargs["host"] == "db.example.com"
+    assert kwargs["port"] == 3306
+    assert kwargs["user"] == "admin"
+    assert kwargs["password"] == "secret"
+    assert kwargs["database"] == "mydb"
+
+
+def test_parse_dsn_kwargs_minimal():
+    from a2db.drivers import _parse_dsn_kwargs
+
+    kwargs = _parse_dsn_kwargs("mysql://localhost/mydb")
+    assert kwargs["host"] == "localhost"
+    assert kwargs["database"] == "mydb"
+    assert "port" not in kwargs
+    assert "user" not in kwargs
+
+
 def test_all_schemes_have_install_hints():
     reg = DriverRegistry()
     for scheme in ["postgresql", "mysql", "mariadb", "sqlite", "oracle", "mssql"]:

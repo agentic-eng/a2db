@@ -65,6 +65,14 @@ def test_list_empty(config_dir: Path):
     assert store.list_connections() == []
 
 
+def test_save_and_load_dsn_with_special_chars(config_dir: Path):
+    store = ConnectionStore(config_dir)
+    dsn = 'postgresql://admin:p@ss"word@localhost:5432/db'
+    store.save("app", "dev", "main", dsn)
+    info = store.load("app", "dev", "main")
+    assert info.dsn == dsn
+
+
 def test_connection_info_scheme(config_dir: Path):
     store = ConnectionStore(config_dir)
     store.save("app", "dev", "main", "postgresql://localhost/main")

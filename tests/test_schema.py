@@ -86,6 +86,14 @@ def test_search_with_limit(explorer: SchemaExplorer):
     assert result["truncated"] is True
 
 
+def test_unsupported_object_type_raises(explorer: SchemaExplorer):
+    with pytest.raises(ValueError, match="Unsupported object type: 'index'"):
+        explorer.search_objects(
+            connection=_conn_spec(),
+            object_type="index",
+        )
+
+
 def test_result_metadata(explorer: SchemaExplorer):
     result = explorer.search_objects(
         connection=_conn_spec(),

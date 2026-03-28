@@ -9,12 +9,12 @@ from pathlib import Path
 import click
 
 from a2db import __version__
-from a2db.connections import ConnectionStore
+from a2db.config import DEFAULT_CONFIG_DIR
+from a2db.connections import ConnectionInfo, ConnectionStore
+from a2db.drivers import DriverNotFoundError, DriverRegistry
 from a2db.executor import QueryExecutor
 from a2db.formatter import format_results
 from a2db.schema import SchemaExplorer
-
-DEFAULT_CONFIG_DIR = Path.home() / ".config" / "a2db" / "connections"
 
 
 def _store() -> ConnectionStore:
@@ -37,6 +37,13 @@ def cli(ctx: click.Context) -> None:
 @click.argument("dsn")
 def login(project: str, env: str, db: str, dsn: str) -> None:
     """Save a database connection."""
+    scheme = ConnectionInfo(project=project, env=env, db=db, dsn=dsn).scheme
+    try:
+        DriverRegistry().resolve(scheme)
+    except DriverNotFoundError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+
     store = _store()
     path = store.save(project, env, db, dsn)
     click.echo(f"Connection saved: {path}")

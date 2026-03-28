@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 
 from a2db.drivers import DriverRegistry
 
+_SUPPORTED_OBJECT_TYPES = {"table", "column"}
+
 if TYPE_CHECKING:
     from a2db.connections import ConnectionStore
 
@@ -28,6 +30,10 @@ class SchemaExplorer:
         limit: int = 100,
     ) -> dict:
         """Search database objects with progressive detail levels."""
+        if object_type not in _SUPPORTED_OBJECT_TYPES:
+            supported = ", ".join(sorted(_SUPPORTED_OBJECT_TYPES))
+            raise ValueError(f"Unsupported object type: '{object_type}'. Supported: {supported}")
+
         info = self.store.load(connection["project"], connection["env"], connection["db"])
         conn = self.registry.connect(info.dsn)
 

@@ -50,15 +50,41 @@ def _connect_sqlite(dsn: str):
     return sqlite3.connect(db_path)
 
 
+def _parse_dsn_kwargs(dsn: str) -> dict:
+    """Parse a DSN URI into keyword arguments for DBAPI connect()."""
+    parsed = urlparse(dsn)
+    kwargs: dict = {}
+    if parsed.hostname:
+        kwargs["host"] = parsed.hostname
+    if parsed.port:
+        kwargs["port"] = parsed.port
+    if parsed.username:
+        kwargs["user"] = parsed.username
+    if parsed.password:
+        kwargs["password"] = parsed.password
+    if parsed.path and parsed.path != "/":
+        kwargs["database"] = parsed.path.lstrip("/")
+    return kwargs
+
+
+# Drivers that accept a full DSN/URI string directly
+_DSN_ACCEPTING_DRIVERS = {"psycopg2"}
+
+
 def _connect_generic(module_name: str, dsn: str):
-    """Connect using a generic DBAPI 2.0 driver that accepts a DSN string."""
+    """Connect using a generic DBAPI 2.0 driver. Parses DSN into kwargs for most drivers."""
     try:
         mod = importlib.import_module(module_name)
     except ImportError as exc:
         driver = _DRIVERS.get(urlparse(dsn).scheme.split("+")[0])
         hint = driver.install_hint if driver else "unknown"
         raise DriverNotFoundError(f"Driver '{module_name}' not found. Install it: {hint}") from exc
-    return mod.connect(dsn)
+
+    if module_name in _DSN_ACCEPTING_DRIVERS:
+        return mod.connect(dsn)
+
+    kwargs = _parse_dsn_kwargs(dsn)
+    return mod.connect(**kwargs)
 
 
 class DriverRegistry:

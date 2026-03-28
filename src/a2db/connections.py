@@ -39,7 +39,11 @@ class ConnectionStore:
         """Save a connection. Creates or overwrites the TOML file."""
         self.config_dir.mkdir(parents=True, exist_ok=True)
         path = self._path(project, env, db)
-        content = f'project = "{project}"\nenv = "{env}"\ndb = "{db}"\ndsn = "{dsn}"\n'
+
+        def _escape(value: str) -> str:
+            return value.replace("\\", "\\\\").replace('"', '\\"')
+
+        content = f'project = "{_escape(project)}"\nenv = "{_escape(env)}"\ndb = "{_escape(db)}"\ndsn = "{_escape(dsn)}"\n'
         path.write_text(content)
         return path
 

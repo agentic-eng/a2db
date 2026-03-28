@@ -73,6 +73,21 @@ def test_validate_read_only_rejects_alter():
         validate_read_only("ALTER TABLE users ADD COLUMN age INTEGER")
 
 
+def test_validate_read_only_rejects_comment_bypass():
+    with pytest.raises(ReadOnlyViolationError):
+        validate_read_only("/* harmless */ DELETE FROM users")
+
+
+def test_validate_read_only_rejects_multi_statement():
+    with pytest.raises(ReadOnlyViolationError):
+        validate_read_only("SELECT 1; DROP TABLE users")
+
+
+def test_validate_read_only_rejects_create():
+    with pytest.raises(ReadOnlyViolationError):
+        validate_read_only("CREATE TABLE evil (id INTEGER)")
+
+
 def test_dsn_to_dialect_mapping():
     assert DSN_TO_DIALECT["postgresql"] == "postgres"
     assert DSN_TO_DIALECT["mysql"] == "mysql"

@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from a2db.connections import ConnectionStore
+from a2db.config import DEFAULT_CONFIG_DIR
+from a2db.connections import ConnectionInfo, ConnectionStore
+from a2db.drivers import DriverRegistry
 from a2db.executor import QueryExecutor
 from a2db.formatter import format_results
 from a2db.schema import SchemaExplorer
-
-DEFAULT_CONFIG_DIR = Path.home() / ".config" / "a2db" / "connections"
 
 server = FastMCP(
     "a2db",
@@ -33,6 +32,9 @@ def _store() -> ConnectionStore:
 @server.tool()
 def login(project: str, env: str, db: str, dsn: str) -> str:
     """Save a database connection. The (project, env, db) triple is the unique key."""
+    scheme = ConnectionInfo(project=project, env=env, db=db, dsn=dsn).scheme
+    DriverRegistry().resolve(scheme)
+
     store = _store()
     path = store.save(project, env, db, dsn)
     return f"Connection saved: {path}"
@@ -84,9 +86,9 @@ def search_objects(
     detail_level: str = "names",
     limit: int = 100,
 ) -> str:
-    """Search database objects (tables, columns, indexes, etc.).
+    """Search database objects.
 
-    object_type: schema, table, column, index, procedure, function
+    object_type: table, column
     detail_level: names (minimal), summary (with metadata), full (complete structure)
     """
     explorer = SchemaExplorer(_store())

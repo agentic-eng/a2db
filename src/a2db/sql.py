@@ -18,18 +18,53 @@ DSN_TO_DIALECT: dict[str, str] = {
     "mssql": "tsql",
 }
 
-_FORBIDDEN_STATEMENTS = {"INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE", "ALTER", "CREATE", "GRANT", "REVOKE"}
+_ALLOWED_STATEMENT_TYPES = {
+    sqlglot.exp.Select,
+    sqlglot.exp.Union,
+}
+
+_FORBIDDEN_KEYWORDS = {"INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE", "ALTER", "CREATE", "GRANT", "REVOKE"}
 
 
 class ReadOnlyViolationError(Exception):
     """Raised when a query contains a write operation."""
 
 
+class SQLParseError(Exception):
+    """Raised when SQL cannot be parsed."""
+
+
 def validate_read_only(sql: str) -> None:
-    """Reject DML/DDL statements. Only SELECT, WITH, EXPLAIN, SHOW allowed."""
-    first_token = sql.strip().split()[0].upper().rstrip(";")
-    if first_token in _FORBIDDEN_STATEMENTS:
-        raise ReadOnlyViolationError(f"Write operation not allowed: {first_token}")
+    """Reject DML/DDL statements. Uses SQLGlot parsing to catch comments and multi-statement bypass."""
+    stripped = sql.strip().rstrip(";")
+    if not stripped:
+        raise ReadOnlyViolationError("Empty query")
+
+    try:
+        statements = sqlglot.parse(stripped)
+    except sqlglot.errors.ParseError:
+        # Fall back to keyword check if SQLGlot can't parse
+        first_token = stripped.split()[0].upper()
+        if first_token in _FORBIDDEN_KEYWORDS:
+            raise ReadOnlyViolationError(f"Write operation not allowed: {first_token}") from None
+        return
+
+    if not statements:
+        raise ReadOnlyViolationError("Empty query")
+
+    for stmt in statements:
+        if stmt is None:
+            continue
+        stmt_type = type(stmt)
+        if stmt_type in _ALLOWED_STATEMENT_TYPES:
+            continue
+        # Check if it's a Command like EXPLAIN or SHOW
+        if isinstance(stmt, sqlglot.exp.Command):
+            cmd_name = stmt.this.upper() if isinstance(stmt.this, str) else ""
+            if cmd_name in ("EXPLAIN", "SHOW", "DESCRIBE", "PRAGMA"):
+                continue
+        stmt_name = stmt.key.upper()
+        raise ReadOnlyViolationError(f"Write operation not allowed: {stmt_name}")
 
 
 def wrap_with_pagination(
@@ -43,5 +78,8 @@ def wrap_with_pagination(
     sqlglot_dialect = DSN_TO_DIALECT.get(dialect, dialect)
 
     wrapped = f"SELECT * FROM ({sql}) AS _q LIMIT {limit} OFFSET {offset}"  # noqa: S608
-    transpiled = sqlglot.transpile(wrapped, read=sqlglot_dialect, write=sqlglot_dialect)
+    try:
+        transpiled = sqlglot.transpile(wrapped, read=sqlglot_dialect, write=sqlglot_dialect)
+    except sqlglot.errors.ParseError as exc:
+        raise SQLParseError(f"Failed to parse SQL: {exc}") from exc
     return transpiled[0]
