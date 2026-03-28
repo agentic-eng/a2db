@@ -110,3 +110,12 @@ def search_objects(
         limit=limit,
     )
     return json.dumps(result, indent=2)
+
+
+def main() -> None:
+    """Run the MCP server (stdio transport)."""
+    server.run()
+
+
+if __name__ == "__main__":
+    main()

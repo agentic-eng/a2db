@@ -14,6 +14,7 @@ dependencies = [
 
 [project.scripts]
 a2db = "a2db.cli:cli"
+a2db-mcp = "a2db.mcp_server:main"
 
 [build-system]
 requires = ["hatchling"]
