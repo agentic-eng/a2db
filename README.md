@@ -14,6 +14,7 @@
     <a href="https://pypi.org/project/a2db/"><img src="https://img.shields.io/pypi/pyversions/a2db.svg" alt="Python versions"></a>
     <a href="https://github.com/agentic-eng/a2db/blob/main/LICENSE"><img src="https://img.shields.io/github/license/agentic-eng/a2db.svg" alt="License"></a>
     <a href="https://github.com/agentic-eng/a2db/actions"><img src="https://github.com/agentic-eng/a2db/actions/workflows/publish.yml/badge.svg" alt="CI"></a>
+    <a href="https://registry.modelcontextprotocol.io/servers/io.github.agentic-eng/a2db"><img src="https://img.shields.io/badge/MCP-registry-blue" alt="MCP Registry"></a>
   </p>
   <p align="center">
     <a href="#quick-start">Quick Start</a> &middot;
@@ -315,3 +316,5 @@ Apache 2.0
 <p align="center">
   <sub>Built by <a href="https://github.com/iorlas">Denis Tomilin</a></sub>
 </p>
+
+<!-- mcp-name: io.github.agentic-eng/a2db -->
