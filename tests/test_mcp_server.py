@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from a2db.mcp_server import _normalize_queries
+from a2db.mcp_server import _normalize_queries, _register_connections
 
 
 def test_normalize_queries_dict_passthrough():
@@ -85,3 +85,45 @@ def test_normalize_queries_default_connection_with_list():
 def test_normalize_queries_invalid_type_raises():
     with pytest.raises(TypeError, match="queries must be a dict or list"):
         _normalize_queries(42)
+
+
+def test_register_connections(config_dir, monkeypatch):
+    monkeypatch.setattr("a2db.mcp_server.DEFAULT_CONFIG_DIR", config_dir)
+    _register_connections(["--register", "myapp/prod/main", "postgresql://user:pass@host/db"])
+
+    from a2db.connections import ConnectionStore
+
+    store = ConnectionStore(config_dir)
+    info = store.load("myapp", "prod", "main")
+    assert info.dsn == "postgresql://user:pass@host/db"
+
+
+def test_register_multiple_connections(config_dir, monkeypatch):
+    monkeypatch.setattr("a2db.mcp_server.DEFAULT_CONFIG_DIR", config_dir)
+    _register_connections(
+        [
+            "--register",
+            "app/prod/main",
+            "postgresql://u:p@h/db1",
+            "--register",
+            "app/prod/analytics",
+            "postgresql://u:p@h/db2",
+        ]
+    )
+
+    from a2db.connections import ConnectionStore
+
+    store = ConnectionStore(config_dir)
+    assert store.load("app", "prod", "main").dsn == "postgresql://u:p@h/db1"
+    assert store.load("app", "prod", "analytics").dsn == "postgresql://u:p@h/db2"
+
+
+def test_register_invalid_triple_raises(config_dir, monkeypatch):
+    monkeypatch.setattr("a2db.mcp_server.DEFAULT_CONFIG_DIR", config_dir)
+    with pytest.raises(ValueError, match="Invalid connection triple"):
+        _register_connections(["--register", "bad-format", "postgresql://u:p@h/db"])
+
+
+def test_register_ignores_unknown_args(config_dir, monkeypatch):
+    monkeypatch.setattr("a2db.mcp_server.DEFAULT_CONFIG_DIR", config_dir)
+    _register_connections(["--unknown", "foo"])  # should not raise

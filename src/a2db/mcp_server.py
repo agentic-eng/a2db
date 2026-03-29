@@ -161,8 +161,30 @@ async def search_objects(
     return json.dumps(result, indent=2)
 
 
+def _register_connections(args: list[str]) -> None:
+    """Pre-register connections from --register pairs in CLI args."""
+    store = _store()
+    i = 0
+    while i < len(args):
+        if args[i] == "--register" and i + 2 < len(args):
+            triple = args[i + 1]
+            dsn = args[i + 2]
+            parts = triple.split("/")
+            if len(parts) != 3:
+                msg = f"Invalid connection triple '{triple}' — expected project/env/db"
+                raise ValueError(msg)
+            project, env, db = parts
+            store.save(project, env, db, dsn)
+            i += 3
+        else:
+            i += 1
+
+
 def main() -> None:
     """Run the MCP server (stdio transport)."""
+    import sys  # noqa: PLC0415
+
+    _register_connections(sys.argv[1:])
     server.run()
 
 

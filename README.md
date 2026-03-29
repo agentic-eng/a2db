@@ -73,7 +73,10 @@ claude mcp add -s user a2db -- a2db-mcp
   "mcpServers": {
     "a2db": {
       "command": "uvx",
-      "args": ["a2db-mcp"],
+      "args": [
+        "a2db-mcp",
+        "--register", "myapp/prod/main", "postgresql://user:${DB_PASSWORD}@host/mydb"
+      ],
       "env": {
         "DB_PASSWORD": "your-password-here"
       }
@@ -82,11 +85,9 @@ claude mcp add -s user a2db -- a2db-mcp
 }
 ```
 
-Then ask your agent to connect:
+The `--register` flag pre-registers connections at server startup — no `login` step needed, the agent can query immediately. Use multiple `--register` pairs for multiple databases.
 
-> "Connect to my PostgreSQL database at localhost with user `app` and password from `${DB_PASSWORD}`"
-
-The agent calls `login`, and you're ready to query.
+Alternatively, skip `--register` and let the agent call `login` on demand.
 
 ### As a CLI
 
