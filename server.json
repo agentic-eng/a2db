@@ -6,12 +6,12 @@
     "url": "https://github.com/agentic-eng/a2db",
     "source": "github"
   },
-  "version": "0.2.0",
+  "version": "0.2.1",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "a2db",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "runtime": "python",
       "transport": {
         "type": "stdio"
