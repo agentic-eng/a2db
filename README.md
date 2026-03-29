@@ -10,10 +10,10 @@
     5 databases &middot; batch queries &middot; pre-configured connections &middot; SQLGlot read-only
   </p>
   <p align="center">
-    <a href="https://pypi.org/project/a2db/"><img src="https://img.shields.io/pypi/v/a2db" alt="PyPI"></a>
-    <a href="https://pypi.org/project/a2db/"><img src="https://img.shields.io/pypi/dm/a2db" alt="Downloads"></a>
-    <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0"></a>
-    <a href="https://python.org"><img src="https://img.shields.io/badge/python-3.12%2B-blue.svg" alt="Python 3.12+"></a>
+    <a href="https://pypi.org/project/a2db/"><img src="https://img.shields.io/pypi/v/a2db.svg" alt="PyPI"></a>
+    <a href="https://pypi.org/project/a2db/"><img src="https://img.shields.io/pypi/pyversions/a2db.svg" alt="Python versions"></a>
+    <a href="https://github.com/agentic-eng/a2db/blob/main/LICENSE"><img src="https://img.shields.io/github/license/agentic-eng/a2db.svg" alt="License"></a>
+    <a href="https://github.com/agentic-eng/a2db/actions"><img src="https://github.com/agentic-eng/a2db/actions/workflows/publish.yml/badge.svg" alt="CI"></a>
   </p>
   <p align="center">
     <a href="#quick-start">Quick Start</a> &middot;
