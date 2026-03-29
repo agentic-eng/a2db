@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from mcp.server.fastmcp import FastMCP
 
@@ -64,27 +64,50 @@ def list_connections(project: str | None = None) -> str:
     return "\n".join(lines)
 
 
-def _normalize_queries(queries: dict[str, dict] | list[dict]) -> dict[str, dict]:
-    """Normalize queries to named dict format.
+def _normalize_queries(
+    raw_queries: Any,
+    default_connection: dict[str, str] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Normalize queries from any format to named dict.
 
-    Accepts both named dict ({"label": {connection, sql}}) and list
-    ([{connection, sql}]) formats. Lists get auto-named q1, q2, etc.
+    Accepts dict, list, or JSON string. Lists get auto-named q1, q2, etc.
+    If default_connection is provided, it's injected into queries that lack one.
     """
+    queries: Any = raw_queries
+
+    # Handle JSON string input
+    if isinstance(queries, str):
+        queries = json.loads(queries)
+
+    # List → named dict
     if isinstance(queries, list):
-        return {f"q{i + 1}": q for i, q in enumerate(queries)}
-    return queries
+        queries = {f"q{i + 1}": q for i, q in enumerate(queries)}
+
+    if not isinstance(queries, dict):
+        msg = f"queries must be a dict or list, got {type(queries).__name__}"
+        raise TypeError(msg)
+
+    # Inject default connection where missing
+    normalized = cast("dict[str, dict[str, Any]]", queries)
+    if default_connection:
+        for spec in normalized.values():
+            if "connection" not in spec:
+                spec["connection"] = default_connection
+
+    return normalized
 
 
 @server.tool()
 async def execute(
-    queries: dict[str, dict] | list[dict[str, Any]],
+    queries: Any,
+    connection: dict[str, str] | None = None,
     format: str = "tsv",  # noqa: A002
     limit: int = 100,
     offset: int = 0,
 ) -> str:
     """Execute named SQL queries. Each query specifies its connection and SQL.
 
-    Example queries parameter (named dict — preferred):
+    Example — named dict (preferred):
     {
         "active_users": {
             "connection": {"project": "myapp", "env": "prod", "db": "users"},
@@ -92,17 +115,19 @@ async def execute(
         }
     }
 
-    Also accepts a list of queries (auto-named q1, q2, ...):
+    Example — list (auto-named q1, q2, ...):
     [
-        {
-            "connection": {"project": "myapp", "env": "prod", "db": "users"},
-            "sql": "SELECT id, name FROM users WHERE active = true"
-        }
+        {"connection": {"project": "myapp", "env": "prod", "db": "users"}, "sql": "SELECT ..."},
+        {"connection": {"project": "myapp", "env": "prod", "db": "users"}, "sql": "SELECT ..."}
     ]
+
+    Example — with default connection (avoids repeating connection in each query):
+    connection: {"project": "myapp", "env": "prod", "db": "users"}
+    queries: {"users": {"sql": "SELECT ..."}, "orders": {"sql": "SELECT ..."}}
 
     Returns results in TSV (default) or JSON format.
     """
-    normalized = _normalize_queries(queries)
+    normalized = _normalize_queries(queries, default_connection=connection)
     store = _store()
     executor = QueryExecutor(store)
     results = await executor.execute(normalized, limit=limit, offset=offset)
