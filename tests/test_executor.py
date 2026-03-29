@@ -78,6 +78,28 @@ async def test_execute_rejects_write(executor: QueryExecutor):
         await executor.execute(queries)
 
 
+async def test_execute_allows_write_when_read_only_false(executor: QueryExecutor):
+    queries = {
+        "insert": {
+            "connection": {"project": "testapp", "env": "dev", "db": "main"},
+            "sql": "INSERT INTO users (id, name, email, active) VALUES (99, 'Test', 'test@example.com', 1)",
+        }
+    }
+    # Should not raise ReadOnlyViolationError
+    results = await executor.execute(queries, read_only=False)
+    assert "insert" in results
+
+    # Verify the write actually happened
+    verify = {
+        "check": {
+            "connection": {"project": "testapp", "env": "dev", "db": "main"},
+            "sql": "SELECT name FROM users WHERE id = 99",
+        }
+    }
+    check = await executor.execute(verify)
+    assert check["check"].rows[0][0] == "Test"
+
+
 async def test_execute_truncated_flag(executor: QueryExecutor):
     queries = {
         "check": {

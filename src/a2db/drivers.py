@@ -21,6 +21,7 @@ class AsyncConnection(Protocol):
 
     async def execute(self, sql: str) -> list[tuple]: ...
     async def fetch(self, sql: str) -> tuple[list[tuple], object]: ...
+    async def commit(self) -> None: ...
     async def close(self) -> None: ...
 
 
@@ -81,6 +82,9 @@ class _AsyncSqliteConnection:
         description = cursor.description
         return rows, description
 
+    async def commit(self) -> None:
+        await self._conn.commit()
+
     async def close(self) -> None:
         await self._conn.close()
 
@@ -99,6 +103,9 @@ class _AsyncSyncConnection:
 
         return await asyncio.to_thread(_run)
 
+    async def commit(self) -> None:
+        await asyncio.to_thread(self._conn.commit)
+
     async def close(self) -> None:
         await asyncio.to_thread(self._conn.close)
 
@@ -115,6 +122,9 @@ class _AsyncPgConnection:
             return [], []
         columns = [(key, None) for key in rows[0].keys()]  # noqa: SIM118 — asyncpg Record.__iter__ yields values, not keys
         return [tuple(row.values()) for row in rows], columns
+
+    async def commit(self) -> None:
+        pass  # asyncpg auto-commits outside transactions
 
     async def close(self) -> None:
         await self._conn.close()

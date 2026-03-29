@@ -92,6 +92,8 @@ class QueryExecutor:
         queries: dict[str, dict],
         limit: int = 100,
         offset: int = 0,
+        *,
+        read_only: bool = True,
     ) -> dict[str, QueryResult]:
         """Execute a batch of named queries. Returns results keyed by name."""
         results = {}
@@ -99,7 +101,8 @@ class QueryExecutor:
             conn_spec = query_spec["connection"]
             sql = query_spec["sql"]
 
-            validate_read_only(sql)
+            if read_only:
+                validate_read_only(sql)
 
             info = self.store.load(
                 conn_spec["project"],
@@ -109,13 +112,18 @@ class QueryExecutor:
 
             dialect = DSN_TO_DIALECT.get(info.scheme, info.scheme)
 
-            # Request limit+1 rows to detect truncation
-            wrapped_sql = wrap_with_pagination(sql, limit=limit + 1, offset=offset, dialect=dialect)
+            # Pagination only applies to read queries
+            if read_only:
+                exec_sql = wrap_with_pagination(sql, limit=limit + 1, offset=offset, dialect=dialect)
+            else:
+                exec_sql = sql
 
             conn = await self.registry.connect(info.resolved_dsn)
             try:
-                rows, description = await conn.fetch(wrapped_sql)
-                columns = [desc[0] for desc in description]
+                rows, description = await conn.fetch(exec_sql)
+                columns = [desc[0] for desc in description] if description else []
+                if not read_only:
+                    await conn.commit()
             except Exception as exc:
                 error_msg = str(exc)
                 enriched = await self._enrich_error(conn, info.scheme, sql, error_msg)

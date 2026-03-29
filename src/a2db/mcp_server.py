@@ -105,19 +105,18 @@ async def execute(
     limit: int = 100,
     offset: int = 0,
 ) -> dict:
-    """Execute named SQL queries. Each query specifies its connection and SQL.
+    """Execute read-only SQL queries.
 
     Example — named dict (preferred):
     {
-        "active_users": {
-            "connection": {"project": "myapp", "env": "prod", "db": "users"},
-            "sql": "SELECT id, name FROM users WHERE active = true"
+        "connection": {"project": "myapp", "env": "prod", "db": "users"},
+        "queries": {
+            "active_users": {"sql": "SELECT id, name FROM users WHERE active = true"}
         }
     }
 
     Example — list (auto-named q1, q2, ...):
     [
-        {"connection": {"project": "myapp", "env": "prod", "db": "users"}, "sql": "SELECT ..."},
         {"connection": {"project": "myapp", "env": "prod", "db": "users"}, "sql": "SELECT ..."}
     ]
 
