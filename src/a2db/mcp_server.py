@@ -104,7 +104,7 @@ async def execute(
     format: str = "tsv",  # noqa: A002
     limit: int = 100,
     offset: int = 0,
-) -> str:
+) -> dict:
     """Execute named SQL queries. Each query specifies its connection and SQL.
 
     Example — named dict (preferred):

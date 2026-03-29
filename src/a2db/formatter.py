@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
+from typing import Any
 
 FIELD_MAX_LENGTH = 2000
 
@@ -29,9 +29,9 @@ def _truncate_field(value: object) -> str:
     return text[:FIELD_MAX_LENGTH] + "... [truncated]"
 
 
-def _format_tsv(results: dict[str, QueryResult]) -> str:
-    """Format results as JSON envelope with TSV row data."""
-    output = {}
+def _format_tsv(results: dict[str, QueryResult]) -> dict[str, Any]:
+    """Format results as dict with TSV row data."""
+    output: dict[str, Any] = {}
     for name, result in results.items():
         header = "\t".join(result.columns)
         rows = "\n".join("\t".join(_truncate_field(v) for v in row) for row in result.rows)
@@ -41,16 +41,16 @@ def _format_tsv(results: dict[str, QueryResult]) -> str:
             "rows": result.count,
             "truncated": result.truncated,
         }
-    return json.dumps(output, indent=2)
+    return output
 
 
-def _format_json(results: dict[str, QueryResult]) -> str:
-    """Format results as JSON."""
-    output = {}
+def _format_json(results: dict[str, QueryResult]) -> dict[str, Any]:
+    """Format results as structured dict."""
+    output: dict[str, Any] = {}
     for name, result in results.items():
         rows_as_dicts = []
         for row in result.rows:
-            row_dict = {}
+            row_dict: dict[str, Any] = {}
             for col, val in zip(result.columns, row, strict=False):
                 if isinstance(val, str) and len(val) > FIELD_MAX_LENGTH:
                     val = val[:FIELD_MAX_LENGTH] + "... [truncated]"
@@ -62,10 +62,10 @@ def _format_json(results: dict[str, QueryResult]) -> str:
             "count": result.count,
             "truncated": result.truncated,
         }
-    return json.dumps(output, indent=2, default=str)
+    return output
 
 
-def format_results(results: dict[str, QueryResult], fmt: str = "tsv") -> str:
+def format_results(results: dict[str, QueryResult], fmt: str = "tsv") -> dict[str, Any]:
     """Format query results in the specified format."""
     if fmt == "json":
         return _format_json(results)

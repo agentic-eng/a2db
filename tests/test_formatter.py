@@ -1,5 +1,3 @@
-import json
-
 from a2db.formatter import QueryResult, format_results
 
 
@@ -9,8 +7,7 @@ def _make_result(name: str, columns: list[str], rows: list[list], truncated: boo
 
 def test_format_tsv_single_query():
     result = _make_result("users", ["id", "name"], [[1, "Alice"], [2, "Bob"]])
-    output = format_results({"users": result}, fmt="tsv")
-    data = json.loads(output)
+    data = format_results({"users": result}, fmt="tsv")
     assert "users" in data
     assert data["users"]["data"] == "id\tname\n1\tAlice\n2\tBob"
     assert data["users"]["rows"] == 2
@@ -20,8 +17,7 @@ def test_format_tsv_single_query():
 def test_format_tsv_multiple_queries():
     r1 = _make_result("users", ["id", "name"], [[1, "Alice"]])
     r2 = _make_result("orders", ["id", "total"], [[101, 49.99]])
-    output = format_results({"users": r1, "orders": r2}, fmt="tsv")
-    data = json.loads(output)
+    data = format_results({"users": r1, "orders": r2}, fmt="tsv")
     assert "users" in data
     assert "orders" in data
     assert "1\tAlice" in data["users"]["data"]
@@ -30,15 +26,13 @@ def test_format_tsv_multiple_queries():
 
 def test_format_tsv_truncated():
     result = _make_result("users", ["id"], [[1]], truncated=True)
-    output = format_results({"users": result}, fmt="tsv")
-    data = json.loads(output)
+    data = format_results({"users": result}, fmt="tsv")
     assert data["users"]["truncated"] is True
 
 
 def test_format_json_single_query():
     result = _make_result("users", ["id", "name"], [[1, "Alice"], [2, "Bob"]])
-    output = format_results({"users": result}, fmt="json")
-    data = json.loads(output)
+    data = format_results({"users": result}, fmt="json")
     assert "users" in data
     assert data["users"]["columns"] == ["id", "name"]
     assert data["users"]["rows"] == [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]
@@ -49,32 +43,28 @@ def test_format_json_single_query():
 def test_format_json_multiple_queries():
     r1 = _make_result("users", ["id"], [[1]])
     r2 = _make_result("orders", ["id"], [[101]])
-    output = format_results({"users": r1, "orders": r2}, fmt="json")
-    data = json.loads(output)
+    data = format_results({"users": r1, "orders": r2}, fmt="json")
     assert "users" in data
     assert "orders" in data
 
 
 def test_format_tsv_none_value():
     result = _make_result("users", ["id", "name"], [[1, None]])
-    output = format_results({"users": result}, fmt="tsv")
-    data = json.loads(output)
+    data = format_results({"users": result}, fmt="tsv")
     assert "1\tNULL" in data["users"]["data"]
 
 
 def test_format_tsv_long_field_truncated():
     long_text = "x" * 3000
     result = _make_result("data", ["content"], [[long_text]])
-    output = format_results({"data": result}, fmt="tsv")
-    data = json.loads(output)
+    data = format_results({"data": result}, fmt="tsv")
     assert "... [truncated]" in data["data"]["data"]
 
 
 def test_format_json_long_field_truncated():
     long_text = "x" * 3000
     result = _make_result("data", ["content"], [[long_text]])
-    output = format_results({"data": result}, fmt="json")
-    data = json.loads(output)
+    data = format_results({"data": result}, fmt="json")
     assert "... [truncated]" in data["data"]["rows"][0]["content"]
 
 
@@ -88,13 +78,12 @@ def test_format_tsv_numeric_types():
         ["count", "avg_price", "total", "last_seen"],
         [[42, 3.14, Decimal("199.99"), datetime(2026, 1, 1, 12, 0, tzinfo=UTC)]],
     )
-    output = format_results({"stats": result}, fmt="tsv")
-    data = json.loads(output)
+    data = format_results({"stats": result}, fmt="tsv")
     assert "42\t3.14\t199.99\t2026-01-01 12:00:00" in data["stats"]["data"]
 
 
 def test_format_json_numeric_types():
-    """Verify JSON formatter serializes non-standard types via default=str."""
+    """Verify JSON formatter returns native types where possible."""
     from datetime import UTC, datetime
     from decimal import Decimal
 
@@ -103,9 +92,8 @@ def test_format_json_numeric_types():
         ["count", "total", "ts"],
         [[42, Decimal("199.99"), datetime(2026, 1, 1, tzinfo=UTC)]],
     )
-    output = format_results({"stats": result}, fmt="json")
-    data = json.loads(output)
+    data = format_results({"stats": result}, fmt="json")
     row = data["stats"]["rows"][0]
     assert row["count"] == 42
-    assert row["total"] == "199.99"  # Decimal → str via default=str
-    assert "2026" in row["ts"]
+    assert row["total"] == Decimal("199.99")
+    assert "2026" in str(row["ts"])
