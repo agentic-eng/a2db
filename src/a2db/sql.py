@@ -30,6 +30,22 @@ class ReadOnlyViolationError(Exception):
     """Raised when a query contains a write operation."""
 
 
+def sanitize_identifier(value: str) -> str:
+    """Sanitize a SQL identifier (table/column name). Rejects dangerous characters."""
+    if not value or not all(c.isalnum() or c in ("_", ".", "-") for c in value):
+        msg = f"Invalid identifier: {value!r}"
+        raise ValueError(msg)
+    return value
+
+
+def sanitize_like_pattern(value: str) -> str:
+    """Sanitize a SQL LIKE pattern. Allows alphanumeric, _, %, and common chars."""
+    if any(c in value for c in ("'", ";", "--", "/*")):
+        msg = f"Invalid pattern: {value!r}"
+        raise ValueError(msg)
+    return value
+
+
 class SQLParseError(Exception):
     """Raised when SQL cannot be parsed."""
 

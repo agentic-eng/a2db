@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from a2db.drivers import DriverRegistry
+from a2db.sql import sanitize_identifier, sanitize_like_pattern
 
 if TYPE_CHECKING:
     from a2db.connections import ConnectionStore
@@ -33,6 +34,10 @@ class SchemaExplorer:
         if object_type not in _SUPPORTED_OBJECT_TYPES:
             supported = ", ".join(sorted(_SUPPORTED_OBJECT_TYPES))
             raise ValueError(f"Unsupported object type: '{object_type}'. Supported: {supported}")
+
+        sanitize_like_pattern(pattern)
+        if table is not None:
+            sanitize_identifier(table)
 
         info = self.store.load(connection["project"], connection["env"], connection["db"])
         conn = await self.registry.connect(info.resolved_dsn)

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from a2db.drivers import DriverRegistry
 from a2db.formatter import QueryResult
-from a2db.sql import DSN_TO_DIALECT, validate_read_only, wrap_with_pagination
+from a2db.sql import DSN_TO_DIALECT, sanitize_identifier, validate_read_only, wrap_with_pagination
 
 if TYPE_CHECKING:
     from a2db.connections import ConnectionStore
@@ -32,6 +32,7 @@ class QueryError(Exception):
 async def _fetch_table_columns(conn, scheme: str, table_name: str) -> list[dict]:
     """Fetch column names and types for a table. Returns [] on failure."""
     try:
+        sanitize_identifier(table_name)
         if scheme == "sqlite":
             rows, _ = await conn.fetch(f"PRAGMA table_info('{table_name}')")
             return [{"name": row[1], "type": row[2]} for row in rows]

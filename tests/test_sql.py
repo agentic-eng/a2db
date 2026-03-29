@@ -2,7 +2,15 @@ from unittest import mock
 
 import pytest
 
-from a2db.sql import DSN_TO_DIALECT, ReadOnlyViolationError, SQLParseError, validate_read_only, wrap_with_pagination
+from a2db.sql import (
+    DSN_TO_DIALECT,
+    ReadOnlyViolationError,
+    SQLParseError,
+    sanitize_identifier,
+    sanitize_like_pattern,
+    validate_read_only,
+    wrap_with_pagination,
+)
 
 
 def test_wrap_simple_select():
@@ -138,3 +146,33 @@ def test_validate_read_only_fallback_allows_select():
 
     with mock.patch("sqlglot.parse", side_effect=sqlglot.errors.ParseError("bad")):
         validate_read_only("SELECT * FROM t")  # should not raise
+
+
+def test_sanitize_identifier_valid():
+    assert sanitize_identifier("users") == "users"
+    assert sanitize_identifier("my_table") == "my_table"
+    assert sanitize_identifier("public.users") == "public.users"
+
+
+def test_sanitize_identifier_rejects_injection():
+    with pytest.raises(ValueError, match="Invalid identifier"):
+        sanitize_identifier("users'; DROP TABLE users; --")
+    with pytest.raises(ValueError, match="Invalid identifier"):
+        sanitize_identifier("")
+    with pytest.raises(ValueError, match="Invalid identifier"):
+        sanitize_identifier("table name")
+
+
+def test_sanitize_like_pattern_valid():
+    assert sanitize_like_pattern("%") == "%"
+    assert sanitize_like_pattern("user%") == "user%"
+    assert sanitize_like_pattern("%name%") == "%name%"
+
+
+def test_sanitize_like_pattern_rejects_injection():
+    with pytest.raises(ValueError, match="Invalid pattern"):
+        sanitize_like_pattern("'; DROP TABLE users; --")
+    with pytest.raises(ValueError, match="Invalid pattern"):
+        sanitize_like_pattern("test/*comment*/")
+    with pytest.raises(ValueError, match="Invalid pattern"):
+        sanitize_like_pattern("test--comment")
