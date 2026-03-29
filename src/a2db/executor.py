@@ -19,7 +19,7 @@ class QueryExecutor:
         self.store = store
         self.registry = DriverRegistry()
 
-    def execute(
+    async def execute(
         self,
         queries: dict[str, dict],
         limit: int = 100,
@@ -44,14 +44,12 @@ class QueryExecutor:
             # Request limit+1 rows to detect truncation
             wrapped_sql = wrap_with_pagination(sql, limit=limit + 1, offset=offset, dialect=dialect)
 
-            conn = self.registry.connect(info.dsn)
+            conn = await self.registry.connect(info.dsn)
             try:
-                cursor = conn.cursor()
-                cursor.execute(wrapped_sql)
-                columns = [desc[0] for desc in cursor.description]
-                rows = cursor.fetchall()
+                rows, description = await conn.fetch(wrapped_sql)
+                columns = [desc[0] for desc in description]
             finally:
-                conn.close()
+                await conn.close()
 
             truncated = len(rows) > limit
             if truncated:

@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 
 from a2db.drivers import DriverRegistry
 
-_SUPPORTED_OBJECT_TYPES = {"table", "column"}
-
 if TYPE_CHECKING:
     from a2db.connections import ConnectionStore
+
+_SUPPORTED_OBJECT_TYPES = {"table", "column"}
 
 
 class SchemaExplorer:
@@ -19,7 +19,7 @@ class SchemaExplorer:
         self.store = store
         self.registry = DriverRegistry()
 
-    def search_objects(
+    async def search_objects(
         self,
         connection: dict[str, str],
         object_type: str,
@@ -35,17 +35,15 @@ class SchemaExplorer:
             raise ValueError(f"Unsupported object type: '{object_type}'. Supported: {supported}")
 
         info = self.store.load(connection["project"], connection["env"], connection["db"])
-        conn = self.registry.connect(info.dsn)
+        conn = await self.registry.connect(info.dsn)
 
         try:
             if object_type == "table":
-                results = self._search_tables(conn, info.scheme, pattern, detail_level)
-            elif object_type == "column":
-                results = self._search_columns(conn, info.scheme, table, pattern, detail_level)
+                results = await self._search_tables(conn, info.scheme, pattern, detail_level)
             else:
-                results = []
+                results = await self._search_columns(conn, info.scheme, table, pattern, detail_level)
         finally:
-            conn.close()
+            await conn.close()
 
         truncated = len(results) > limit
         if truncated:
@@ -60,62 +58,52 @@ class SchemaExplorer:
             "results": results,
         }
 
-    def _search_tables(self, conn, scheme: str, pattern: str, detail_level: str) -> list[dict]:
-        """Search tables using SQLite-compatible queries."""
-        cursor = conn.cursor()
-
+    async def _search_tables(self, conn, scheme: str, pattern: str, detail_level: str) -> list[dict]:
+        """Search tables."""
         if scheme == "sqlite":
-            cursor.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE ? ORDER BY name",
-                (pattern,),
+            rows, _ = await conn.fetch(
+                f"SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '{pattern}' ORDER BY name"  # noqa: S608
             )
+            tables = [row[0] for row in rows]
         else:
-            cursor.execute(
-                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE %s ORDER BY table_name",
-                (pattern,),
+            sql = (
+                f"SELECT table_name FROM information_schema.tables"  # noqa: S608
+                f" WHERE table_schema = 'public' AND table_name LIKE '{pattern}' ORDER BY table_name"
             )
+            rows, _ = await conn.fetch(sql)
+            tables = [row[0] for row in rows]
 
-        tables = [row[0] for row in cursor.fetchall()]
         results = []
-
         for table_name in tables:
             entry: dict = {"name": table_name}
 
             if detail_level in ("summary", "full"):
                 if scheme == "sqlite":
-                    cursor.execute(f"PRAGMA table_info('{table_name}')")
+                    col_rows, _ = await conn.fetch(f"PRAGMA table_info('{table_name}')")
                 else:
-                    cursor.execute(
-                        "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = %s",
-                        (table_name,),
+                    col_rows, _ = await conn.fetch(
+                        f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}'"  # noqa: S608
                     )
-                columns_info = cursor.fetchall()
-                entry["column_count"] = len(columns_info)
+                entry["column_count"] = len(col_rows)
 
             if detail_level == "full":
                 if scheme == "sqlite":
-                    entry["columns"] = [
-                        {"name": col[1], "type": col[2], "nullable": not col[3], "pk": bool(col[5])} for col in columns_info
-                    ]
+                    entry["columns"] = [{"name": col[1], "type": col[2], "nullable": not col[3], "pk": bool(col[5])} for col in col_rows]
                 else:
-                    entry["columns"] = [{"name": col[0], "type": col[1]} for col in columns_info]
+                    entry["columns"] = [{"name": col[0], "type": col[1]} for col in col_rows]
 
             results.append(entry)
 
         return results
 
-    def _search_columns(self, conn, scheme: str, table: str | None, pattern: str, detail_level: str) -> list[dict]:
+    async def _search_columns(self, conn, scheme: str, table: str | None, pattern: str, detail_level: str) -> list[dict]:
         """Search columns within a table."""
-        cursor = conn.cursor()
-
         if scheme == "sqlite":
-            if table:
-                cursor.execute(f"PRAGMA table_info('{table}')")
-            else:
+            if not table:
                 return []
-            columns = cursor.fetchall()
+            col_rows, _ = await conn.fetch(f"PRAGMA table_info('{table}')")
             results = []
-            for col in columns:
+            for col in col_rows:
                 name = col[1]
                 if pattern == "%" or pattern.replace("%", "") in name:
                     entry: dict = {"name": name}
@@ -126,15 +114,12 @@ class SchemaExplorer:
                     results.append(entry)
             return results
 
-        cursor.execute(
-            "SELECT column_name, data_type, is_nullable "
-            "FROM information_schema.columns "
-            "WHERE table_name = %s AND column_name LIKE %s "
-            "ORDER BY ordinal_position",
-            (table, pattern),
+        col_rows, _ = await conn.fetch(
+            f"SELECT column_name, data_type, is_nullable FROM information_schema.columns "  # noqa: S608
+            f"WHERE table_name = '{table}' AND column_name LIKE '{pattern}' ORDER BY ordinal_position"
         )
         results = []
-        for col in cursor.fetchall():
+        for col in col_rows:
             entry = {"name": col[0]}
             if detail_level in ("summary", "full"):
                 entry["type"] = col[1]

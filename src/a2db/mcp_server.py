@@ -60,7 +60,7 @@ def list_connections(project: str | None = None) -> str:
 
 
 @server.tool()
-def execute(
+async def execute(
     queries: dict[str, dict],
     format: str = "tsv",  # noqa: A002
     limit: int = 100,
@@ -80,12 +80,12 @@ def execute(
     """
     store = _store()
     executor = QueryExecutor(store)
-    results = executor.execute(queries, limit=limit, offset=offset)
+    results = await executor.execute(queries, limit=limit, offset=offset)
     return format_results(results, fmt=format)
 
 
 @server.tool()
-def search_objects(
+async def search_objects(
     connection: dict[str, str],
     object_type: str,
     pattern: str = "%",
@@ -100,7 +100,7 @@ def search_objects(
     detail_level: names (minimal), summary (with metadata), full (complete structure)
     """
     explorer = SchemaExplorer(_store())
-    result = explorer.search_objects(
+    result = await explorer.search_objects(
         connection=connection,
         object_type=object_type,
         pattern=pattern,

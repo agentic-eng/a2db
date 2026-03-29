@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 from pathlib import Path
@@ -104,7 +105,7 @@ def query(project: str, env: str, db: str, fmt: str, limit: int, offset: int, ba
         click.echo("Error: provide SQL argument or --batch file", err=True)
         sys.exit(1)
 
-    results = executor.execute(queries, limit=limit, offset=offset)
+    results = asyncio.run(executor.execute(queries, limit=limit, offset=offset))
     click.echo(format_results(results, fmt=fmt))
 
 
@@ -124,12 +125,14 @@ def schema(project: str, env: str, db: str, object_type: str, table: str | None,
     detail_level = "full" if object_type == "full" else "names"
     obj_type = "column" if object_type == "columns" else "table"
 
-    result = explorer.search_objects(
-        connection=conn_spec,
-        object_type=obj_type,
-        pattern=pattern,
-        table=table,
-        detail_level=detail_level,
+    result = asyncio.run(
+        explorer.search_objects(
+            connection=conn_spec,
+            object_type=obj_type,
+            pattern=pattern,
+            table=table,
+            detail_level=detail_level,
+        )
     )
 
     if fmt == "json":

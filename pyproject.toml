@@ -10,7 +10,8 @@ dependencies = [
     "click>=8,<9",
     "mcp[cli]>=1.9,<2",
     "sqlglot>=26,<27",
-    "psycopg2-binary>=2.9,<3",
+    "asyncpg>=0.30,<1",
+    "aiosqlite>=0.20,<1",
     "mysql-connector-python>=9,<10",
     "oracledb>=2,<3",
     "pymssql>=2.2,<3",
@@ -125,6 +126,7 @@ max-returns = 6
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --strict-markers --cov --cov-report=term:skip-covered --cov-report=xml --cov-fail-under=90"
+asyncio_mode = "auto"
 env = [
     "A2DB_TEST=1",
 ]
@@ -153,4 +155,5 @@ dev = [
     "ruff>=0.9",
     "ty>=0.0.25",
     "pytest-env>=1.6.0",
+    "pytest-asyncio>=0.24",
 ]

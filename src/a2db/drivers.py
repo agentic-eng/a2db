@@ -1,20 +1,32 @@
-"""Driver registry — resolve DSN schemes to DBAPI 2.0 drivers."""
+"""Driver registry — resolve DSN schemes to async database connections."""
 
 from __future__ import annotations
 
+import asyncio
 import importlib
-import sqlite3
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Protocol
 from urllib.parse import urlparse
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class DriverNotFoundError(Exception):
     """Raised when a database driver cannot be resolved or imported."""
 
 
+class AsyncConnection(Protocol):
+    """Async database connection interface."""
+
+    async def execute(self, sql: str) -> list[tuple]: ...
+    async def fetch(self, sql: str) -> tuple[list[tuple], object]: ...
+    async def close(self) -> None: ...
+
+
 @dataclass(frozen=True)
 class DriverInfo:
-    """Metadata about a DBAPI 2.0 driver."""
+    """Metadata about a database driver."""
 
     scheme: str
     module_name: str
@@ -23,11 +35,11 @@ class DriverInfo:
 
 # Registry of supported database schemes
 _DRIVERS: dict[str, DriverInfo] = {
-    "postgresql": DriverInfo("postgresql", "psycopg2", "pip install psycopg2-binary"),
-    "postgres": DriverInfo("postgres", "psycopg2", "pip install psycopg2-binary"),
+    "postgresql": DriverInfo("postgresql", "asyncpg", "pip install asyncpg"),
+    "postgres": DriverInfo("postgres", "asyncpg", "pip install asyncpg"),
     "mysql": DriverInfo("mysql", "mysql.connector", "pip install mysql-connector-python"),
-    "mariadb": DriverInfo("mariadb", "mariadb", "pip install mariadb"),
-    "sqlite": DriverInfo("sqlite", "sqlite3", "built-in"),
+    "mariadb": DriverInfo("mariadb", "mysql.connector", "pip install mysql-connector-python"),
+    "sqlite": DriverInfo("sqlite", "aiosqlite", "pip install aiosqlite"),
     "oracle": DriverInfo("oracle", "oracledb", "pip install oracledb"),
     "mssql": DriverInfo("mssql", "pymssql", "pip install pymssql"),
 }
@@ -38,15 +50,6 @@ def _parse_dsn(dsn: str) -> tuple[str, str]:
     parsed = urlparse(dsn)
     scheme = parsed.scheme.split("+")[0]
     return scheme, dsn
-
-
-def _connect_sqlite(dsn: str):
-    """Connect to SQLite from a DSN like sqlite:///path/to/db."""
-    parsed = urlparse(dsn)
-    db_path = parsed.path
-    if parsed.netloc:
-        db_path = parsed.netloc + db_path
-    return sqlite3.connect(db_path)
 
 
 def _parse_dsn_kwargs(dsn: str) -> dict:
@@ -66,12 +69,81 @@ def _parse_dsn_kwargs(dsn: str) -> dict:
     return kwargs
 
 
-# Drivers that accept a full DSN/URI string directly
-_DSN_ACCEPTING_DRIVERS = {"psycopg2"}
+class _AsyncSqliteConnection:
+    """Async wrapper around aiosqlite."""
+
+    def __init__(self, conn) -> None:
+        self._conn = conn
+
+    async def fetch(self, sql: str) -> tuple[list[tuple], object]:
+        cursor = await self._conn.execute(sql)
+        rows = await cursor.fetchall()
+        description = cursor.description
+        return rows, description
+
+    async def close(self) -> None:
+        await self._conn.close()
 
 
-def _connect_generic(module_name: str, dsn: str):
-    """Connect using a generic DBAPI 2.0 driver. Parses DSN into kwargs for most drivers."""
+class _AsyncSyncConnection:
+    """Async wrapper for sync DBAPI 2.0 drivers via asyncio.to_thread."""
+
+    def __init__(self, conn) -> None:
+        self._conn = conn
+
+    async def fetch(self, sql: str) -> tuple[list[tuple], Sequence]:
+        def _run():
+            cursor = self._conn.cursor()
+            cursor.execute(sql)
+            return cursor.fetchall(), cursor.description
+
+        return await asyncio.to_thread(_run)
+
+    async def close(self) -> None:
+        await asyncio.to_thread(self._conn.close)
+
+
+class _AsyncPgConnection:
+    """Async wrapper around asyncpg connection."""
+
+    def __init__(self, conn) -> None:
+        self._conn = conn
+
+    async def fetch(self, sql: str) -> tuple[list[tuple], list[tuple]]:
+        rows = await self._conn.fetch(sql)
+        if not rows:
+            return [], []
+        columns = [(key, None) for key in rows[0]]
+        return [tuple(row.values()) for row in rows], columns
+
+    async def close(self) -> None:
+        await self._conn.close()
+
+
+async def _connect_sqlite(dsn: str) -> _AsyncSqliteConnection:
+    """Connect to SQLite via aiosqlite."""
+    import aiosqlite  # noqa: PLC0415
+
+    parsed = urlparse(dsn)
+    db_path = parsed.path
+    if parsed.netloc:
+        db_path = parsed.netloc + db_path
+    conn = await aiosqlite.connect(db_path)
+    return _AsyncSqliteConnection(conn)
+
+
+async def _connect_asyncpg(dsn: str) -> _AsyncPgConnection:
+    """Connect to PostgreSQL via asyncpg."""
+    try:
+        import asyncpg  # noqa: PLC0415
+    except ImportError as exc:
+        raise DriverNotFoundError("Driver 'asyncpg' not found. Install it: pip install asyncpg") from exc
+    conn = await asyncpg.connect(dsn)
+    return _AsyncPgConnection(conn)
+
+
+async def _connect_sync_generic(module_name: str, dsn: str) -> _AsyncSyncConnection:
+    """Connect using a sync DBAPI 2.0 driver, wrapped for async."""
     try:
         mod = importlib.import_module(module_name)
     except ImportError as exc:
@@ -79,15 +151,13 @@ def _connect_generic(module_name: str, dsn: str):
         hint = driver.install_hint if driver else "unknown"
         raise DriverNotFoundError(f"Driver '{module_name}' not found. Install it: {hint}") from exc
 
-    if module_name in _DSN_ACCEPTING_DRIVERS:
-        return mod.connect(dsn)
-
     kwargs = _parse_dsn_kwargs(dsn)
-    return mod.connect(**kwargs)
+    conn = await asyncio.to_thread(mod.connect, **kwargs)
+    return _AsyncSyncConnection(conn)
 
 
 class DriverRegistry:
-    """Resolves DSN schemes to DBAPI 2.0 drivers and creates connections."""
+    """Resolves DSN schemes to database drivers and creates async connections."""
 
     def resolve(self, scheme: str) -> DriverInfo:
         """Look up driver info by DSN scheme."""
@@ -96,12 +166,16 @@ class DriverRegistry:
             raise DriverNotFoundError(f"Unknown database scheme: '{scheme}'")
         return _DRIVERS[scheme]
 
-    def connect(self, dsn: str):
-        """Create a DBAPI 2.0 connection from a DSN string."""
+    async def connect(self, dsn: str):
+        """Create an async database connection from a DSN string."""
         scheme, _ = _parse_dsn(dsn)
-        driver = self.resolve(scheme)
+        self.resolve(scheme)  # validate scheme
 
         if scheme == "sqlite":
-            return _connect_sqlite(dsn)
+            return await _connect_sqlite(dsn)
 
-        return _connect_generic(driver.module_name, dsn)
+        if scheme in ("postgresql", "postgres"):
+            return await _connect_asyncpg(dsn)
+
+        driver = self.resolve(scheme)
+        return await _connect_sync_generic(driver.module_name, dsn)

@@ -17,8 +17,8 @@ def _conn_spec():
     return {"project": "testapp", "env": "dev", "db": "main"}
 
 
-def test_search_tables_names(explorer: SchemaExplorer):
-    result = explorer.search_objects(
+async def test_search_tables_names(explorer: SchemaExplorer):
+    result = await explorer.search_objects(
         connection=_conn_spec(),
         object_type="table",
         detail_level="names",
@@ -28,8 +28,8 @@ def test_search_tables_names(explorer: SchemaExplorer):
     assert "orders" in names
 
 
-def test_search_tables_with_pattern(explorer: SchemaExplorer):
-    result = explorer.search_objects(
+async def test_search_tables_with_pattern(explorer: SchemaExplorer):
+    result = await explorer.search_objects(
         connection=_conn_spec(),
         object_type="table",
         pattern="user%",
@@ -40,8 +40,8 @@ def test_search_tables_with_pattern(explorer: SchemaExplorer):
     assert "orders" not in names
 
 
-def test_search_columns_names(explorer: SchemaExplorer):
-    result = explorer.search_objects(
+async def test_search_columns_names(explorer: SchemaExplorer):
+    result = await explorer.search_objects(
         connection=_conn_spec(),
         object_type="column",
         table="users",
@@ -53,8 +53,8 @@ def test_search_columns_names(explorer: SchemaExplorer):
     assert "email" in names
 
 
-def test_search_tables_summary(explorer: SchemaExplorer):
-    result = explorer.search_objects(
+async def test_search_tables_summary(explorer: SchemaExplorer):
+    result = await explorer.search_objects(
         connection=_conn_spec(),
         object_type="table",
         detail_level="summary",
@@ -63,8 +63,8 @@ def test_search_tables_summary(explorer: SchemaExplorer):
     assert "column_count" in users_entry
 
 
-def test_search_tables_full(explorer: SchemaExplorer):
-    result = explorer.search_objects(
+async def test_search_tables_full(explorer: SchemaExplorer):
+    result = await explorer.search_objects(
         connection=_conn_spec(),
         object_type="table",
         detail_level="full",
@@ -75,8 +75,8 @@ def test_search_tables_full(explorer: SchemaExplorer):
     assert "id" in col_names
 
 
-def test_search_with_limit(explorer: SchemaExplorer):
-    result = explorer.search_objects(
+async def test_search_with_limit(explorer: SchemaExplorer):
+    result = await explorer.search_objects(
         connection=_conn_spec(),
         object_type="table",
         detail_level="names",
@@ -86,16 +86,16 @@ def test_search_with_limit(explorer: SchemaExplorer):
     assert result["truncated"] is True
 
 
-def test_unsupported_object_type_raises(explorer: SchemaExplorer):
+async def test_unsupported_object_type_raises(explorer: SchemaExplorer):
     with pytest.raises(ValueError, match="Unsupported object type: 'index'"):
-        explorer.search_objects(
+        await explorer.search_objects(
             connection=_conn_spec(),
             object_type="index",
         )
 
 
-def test_result_metadata(explorer: SchemaExplorer):
-    result = explorer.search_objects(
+async def test_result_metadata(explorer: SchemaExplorer):
+    result = await explorer.search_objects(
         connection=_conn_spec(),
         object_type="table",
         detail_level="names",
@@ -105,8 +105,8 @@ def test_result_metadata(explorer: SchemaExplorer):
     assert "count" in result
 
 
-def test_search_columns_summary(explorer: SchemaExplorer):
-    result = explorer.search_objects(
+async def test_search_columns_summary(explorer: SchemaExplorer):
+    result = await explorer.search_objects(
         connection=_conn_spec(),
         object_type="column",
         table="users",
@@ -118,8 +118,8 @@ def test_search_columns_summary(explorer: SchemaExplorer):
     assert "pk" in col
 
 
-def test_search_columns_full(explorer: SchemaExplorer):
-    result = explorer.search_objects(
+async def test_search_columns_full(explorer: SchemaExplorer):
+    result = await explorer.search_objects(
         connection=_conn_spec(),
         object_type="column",
         table="users",
@@ -131,9 +131,8 @@ def test_search_columns_full(explorer: SchemaExplorer):
     assert "pk" in col
 
 
-def test_search_columns_no_table_returns_empty(explorer: SchemaExplorer):
-    """When no table is given for column search with SQLite, returns empty list."""
-    result = explorer.search_objects(
+async def test_search_columns_no_table_returns_empty(explorer: SchemaExplorer):
+    result = await explorer.search_objects(
         connection=_conn_spec(),
         object_type="column",
         detail_level="names",
@@ -142,8 +141,8 @@ def test_search_columns_no_table_returns_empty(explorer: SchemaExplorer):
     assert result["count"] == 0
 
 
-def test_search_columns_with_pattern(explorer: SchemaExplorer):
-    result = explorer.search_objects(
+async def test_search_columns_with_pattern(explorer: SchemaExplorer):
+    result = await explorer.search_objects(
         connection=_conn_spec(),
         object_type="column",
         table="users",
