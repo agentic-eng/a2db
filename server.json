@@ -1,9 +1,9 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.agentic-eng/a2db",
+  "name": "io.github.yoselabs/a2db",
   "description": "Safe, read-only database access for AI agents. 5 databases, batch queries, SQLGlot.",
   "repository": {
-    "url": "https://github.com/agentic-eng/a2db",
+    "url": "https://github.com/yoselabs/a2db",
     "source": "github"
   },
   "version": "0.2.1",
